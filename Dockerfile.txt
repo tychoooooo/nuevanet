@@ -1,0 +1,32 @@
+# Base liviana para reducir el uso de almacenamiento y superficie de ataque
+FROM python:3.11-slim
+
+# Variables de entorno por defecto
+ENV PYTHONUNBUFFERED=1 \
+    PORT=5000 \
+    ENVIRONMENT=produccion
+
+# Crear un usuario no privilegiado por motivos de seguridad
+RUN groupadd -r nuevanet && useradd -r -g nuevanet -s /bin/false appuser
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copiar archivos del proyecto
+COPY app.py .
+
+# Asignar permisos al usuario sin privilegios
+RUN chown -R appuser:nuevanet /app
+
+# Cambiar a usuario sin privilegios (evita ejecutar como root)
+USER appuser
+
+# Puerto expuesto
+EXPOSE 5000
+
+# Monitoreo de salud del contenedor
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')" || exit 1
+
+# Comando de inicio
+CMD ["python", "app.py"]
